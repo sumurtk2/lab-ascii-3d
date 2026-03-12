@@ -1,0 +1,434 @@
+/* ============================================
+   CSS Variables — Theme System
+   ============================================ */
+:root,
+[data-theme="dark"] {
+  --surface: #0a0a0a;
+  --foreground: #d4d4d4;
+  --muted: #555;
+  --panel: #111;
+  --panel-border: #2a2a2a;
+  --accent: #00ff88;
+  --accent-dim: #00cc6a;
+  --bubble: #1a1a1a;
+  --soft: #161616;
+  --ascii-color: #ffffff;
+  --ascii-bg: #000000;
+}
+
+[data-theme="light"] {
+  --surface: #f0f0f0;
+  --foreground: #1a1a1a;
+  --muted: #777;
+  --panel: #ffffff;
+  --panel-border: #ccc;
+  --accent: #0055ff;
+  --accent-dim: #0044cc;
+  --bubble: #e8e8e8;
+  --soft: #f5f5f5;
+  --ascii-color: #1a1a1a;
+  --ascii-bg: #f0f0f0;
+}
+
+/* ============================================
+   Base Reset
+   ============================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--surface);
+  color: var(--foreground);
+  transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--accent-dim);
+}
+
+/* ============================================
+   Scanline Overlay
+   ============================================ */
+.scanline-overlay::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+/* ============================================
+   App Frame
+   ============================================ */
+.app-frame {
+  min-height: 100vh;
+  background: var(--surface);
+  transition: background-color 0.3s;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* ============================================
+   Theme Toggle
+   ============================================ */
+#theme-toggle {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 50;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+#theme-toggle:hover {
+  background: var(--soft);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+.header {
+  text-align: center;
+  padding: 2rem 0 1rem;
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: fadeInDown 0.8s ease forwards;
+}
+
+.brand {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 1;
+  color: var(--foreground);
+  text-rendering: geometricPrecision;
+}
+
+.brand-accent {
+  color: var(--accent);
+}
+
+.subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   3D Viewer
+   ============================================ */
+.viewer-container {
+  position: relative;
+  width: 100%;
+  height: 55vh;
+  margin: 1.5rem 0;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeIn 1s ease 0.3s forwards;
+}
+
+#three-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.loading.hidden {
+  display: none;
+}
+
+.loading-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.dots {
+  animation: blink 1.4s infinite;
+}
+
+/* ============================================
+   Chat Panel
+   ============================================ */
+.chat-panel {
+  border: 2px solid var(--panel-border);
+  background: var(--panel);
+  padding: 1.5rem;
+  position: relative;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.8s ease 0.6s forwards;
+}
+
+.chat-messages {
+  min-height: 60px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.chat-message {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+
+.chat-message .role {
+  color: var(--accent);
+  font-weight: 600;
+  margin-right: 0.5em;
+}
+
+.chat-message .text {
+  color: var(--foreground);
+}
+
+.suggestions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.suggestion-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.08s;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 var(--panel-border);
+}
+
+.suggestion-btn:hover {
+  background: var(--bubble);
+  color: var(--foreground);
+}
+
+.suggestion-btn:active {
+  box-shadow: 0 1px 0 var(--panel-border);
+  transform: translateY(2px);
+}
+
+.suggestion-btn .arrow {
+  opacity: 0.5;
+  margin-right: 0.35em;
+}
+
+.chat-input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.input-prefix {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.8;
+  user-select: none;
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+  caret-color: var(--accent);
+}
+
+.chat-input::placeholder {
+  color: var(--muted);
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+.footer {
+  padding: 2rem 0 1.5rem;
+  opacity: 0;
+  animation: fadeIn 1s ease 0.9s forwards;
+}
+
+.footer-line {
+  height: 1px;
+  background: var(--panel-border);
+  margin-bottom: 1.5rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.footer-text {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+  0%, 20% { opacity: 1; }
+  50% { opacity: 0; }
+  80%, 100% { opacity: 1; }
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 640px) {
+  .viewer-container {
+    height: 40vh;
+  }
+
+  .brand {
+    letter-spacing: 0.08em;
+  }
+
+  .suggestions {
+    flex-direction: column;
+  }
+
+  .suggestion-btn {
+    flex: none;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+/* ============================================
+   CRT Vignette
+   ============================================ */
+.app-frame::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
