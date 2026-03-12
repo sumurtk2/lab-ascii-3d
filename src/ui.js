@@ -105,6 +105,22 @@ export function initUI(sceneAPI) {
     setTheme(current === 'dark' ? 'light' : 'dark');
   });
 
+  // ---- Mode switcher ----
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  modeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      if (!mode || !sceneAPI) return;
+
+      modeBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      sceneAPI.setMode(mode);
+
+      // Set data-mode on html for CSS hooks
+      html.setAttribute('data-mode', mode);
+    });
+  });
+
   // ---- Chat ----
   const messagesContainer = document.getElementById('chat-messages');
   const chatInput = document.getElementById('chat-input');

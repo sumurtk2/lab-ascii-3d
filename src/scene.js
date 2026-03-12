@@ -1,5 +1,5 @@
 /**
- * Three.js Scene — loads GLB model with ASCII post-processing
+ * Three.js Scene — supports switching between ASCII and Matrix effects
  */
 
 import * as THREE from 'three';
@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { EffectComposer, EffectPass, RenderPass } from 'postprocessing';
 import { ASCIIEffect, getCellSize } from './ascii-effect.js';
+import { MatrixEffect } from './matrix-effect.js';
 
 export function initScene(canvas) {
   console.log('[Scene] Initializing...');
@@ -23,8 +24,6 @@ export function initScene(canvas) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 1);
 
-  console.log('[Scene] Renderer created, WebGL:', renderer.capabilities.isWebGL2 ? '2' : '1');
-
   // ---- Scene ----
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
@@ -35,15 +34,12 @@ export function initScene(canvas) {
 
   // ---- Lighting ----
   scene.add(new THREE.AmbientLight(0xffffff, 2));
-
   const dirLight = new THREE.DirectionalLight(0x8888cc, 4);
   dirLight.position.set(2, 3, 4);
   scene.add(dirLight);
-
   const fillLight = new THREE.DirectionalLight(0xcc8888, 1.5);
   fillLight.position.set(-3, -1, 2);
   scene.add(fillLight);
-
   const rimLight = new THREE.DirectionalLight(0xffffff, 2);
   rimLight.position.set(0, 2, -3);
   scene.add(rimLight);
@@ -58,35 +54,45 @@ export function initScene(canvas) {
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.5;
 
-  // ---- ASCII Post-Processing ----
+  // ---- Effects ----
   const targetCellSize = getCellSize(12);
-  let asciiEffect;
-  let composer;
 
-  try {
-    composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
+  const asciiEffect = new ASCIIEffect({
+    characters: " .:,'-^=*+?!|0#X%WM@",
+    fontSize: 54,
+    cellSize: targetCellSize,
+    color: '#ffffff',
+    backgroundColor: '#0a0a0a',
+  });
 
-    asciiEffect = new ASCIIEffect({
-      characters: " .:,'-^=*+?!|0#X%WM@",
-      fontSize: 54,
-      cellSize: targetCellSize,
-      color: '#ffffff',
-      backgroundColor: '#0a0a0a',
-      invert: false,
-    });
+  const matrixEffect = new MatrixEffect({
+    fontSize: 48,
+    cellSize: getCellSize(14),
+    rainColor: '#00ff41',
+    highlightColor: '#aaffcc',
+    backgroundColor: '#000000',
+    rainSpeed: 1.0,
+    rainDensity: 0.7,
+  });
 
-    const effectPass = new EffectPass(camera, asciiEffect);
-    composer.addPass(effectPass);
-
-    console.log('[Scene] ASCII effect + composer initialized, cellSize:', targetCellSize);
-  } catch (e) {
-    console.error('[Scene] Failed to create ASCII effect:', e);
-    // Fallback: render without post-processing
-    composer = null;
-    asciiEffect = null;
+  // ---- Composers (one per effect) ----
+  function createComposer(effect) {
+    const comp = new EffectComposer(renderer);
+    comp.addPass(new RenderPass(scene, camera));
+    comp.addPass(new EffectPass(camera, effect));
+    return comp;
   }
+
+  const composers = {
+    ascii: createComposer(asciiEffect),
+    matrix: createComposer(matrixEffect),
+  };
+
+  let currentMode = 'ascii';
+  let activeEffect = asciiEffect;
+  let activeComposer = composers.ascii;
+
+  console.log('[Scene] Effects initialized');
 
   // ---- Mouse tracking ----
   const mouse = { x: -9999, y: -9999, prevX: 0, prevY: 0, velocity: 0, lastTime: 0 };
@@ -117,126 +123,105 @@ export function initScene(canvas) {
   function resize() {
     const parent = canvas.parentElement;
     if (!parent) return;
-    const width = parent.clientWidth;
-    const height = parent.clientHeight;
-    if (width === 0 || height === 0) return;
-
-    camera.aspect = width / height;
+    const w = parent.clientWidth;
+    const h = parent.clientHeight;
+    if (w === 0 || h === 0) return;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-    if (composer) composer.setSize(width, height);
+    renderer.setSize(w, h);
+    composers.ascii.setSize(w, h);
+    composers.matrix.setSize(w, h);
   }
 
   window.addEventListener('resize', resize);
-  // Delay first resize slightly to ensure CSS layout is done
-  requestAnimationFrame(() => {
-    resize();
-    console.log('[Scene] Initial resize done:', canvas.width, 'x', canvas.height);
-  });
+  requestAnimationFrame(resize);
 
   // ---- Load Model ----
   let modelLoaded = false;
-  const loader = new GLTFLoader();
-
-  console.log('[Scene] Loading model...');
-  loader.load(
-    '/models/model.glb',
-    (gltf) => {
-      console.log('[Scene] Model loaded successfully');
-      const model = gltf.scene;
-
-      const box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2.0 / maxDim;
-      model.scale.setScalar(scale);
-      model.position.sub(center.multiplyScalar(scale));
-      model.rotation.y = Math.PI * 0.1;
-
-      scene.add(model);
-      modelLoaded = true;
-
-      const loadingEl = document.getElementById('loading-indicator');
-      if (loadingEl) loadingEl.classList.add('hidden');
-
-      // Start reveal animation
-      revealStart = performance.now();
-    },
-    (progress) => {
-      if (progress.total > 0) {
-        console.log('[Scene] Loading:', Math.round(progress.loaded / progress.total * 100) + '%');
-      }
-    },
-    (error) => {
-      console.error('[Scene] Model load error:', error);
-      const loadingEl = document.getElementById('loading-indicator');
-      if (loadingEl) loadingEl.querySelector('.loading-text').textContent = 'LOAD ERROR';
-    }
-  );
-
-  // ---- Reveal Animation ----
   let revealStart = null;
   const REVEAL_DURATION = 2000;
   const CELL_START = getCellSize(50);
 
+  const loader = new GLTFLoader();
+  console.log('[Scene] Loading model...');
+
+  loader.load('/models/model.glb', (gltf) => {
+    console.log('[Scene] Model loaded');
+    const model = gltf.scene;
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const scale = 2.0 / Math.max(size.x, size.y, size.z);
+    model.scale.setScalar(scale);
+    model.position.sub(center.multiplyScalar(scale));
+    model.rotation.y = Math.PI * 0.1;
+    scene.add(model);
+    modelLoaded = true;
+
+    const loadingEl = document.getElementById('loading-indicator');
+    if (loadingEl) loadingEl.classList.add('hidden');
+
+    revealStart = performance.now();
+  }, undefined, (err) => {
+    console.error('[Scene] Load error:', err);
+  });
+
   // ---- Animation Loop ----
   function animate() {
     requestAnimationFrame(animate);
-
     controls.update();
-
     if (!modelLoaded) return;
 
     const now = performance.now();
 
-    if (asciiEffect) {
-      asciiEffect.setMouse(mouse.x, mouse.y);
-      asciiEffect.setTime(now / 1000);
-      mouse.velocity *= 0.92;
-      if (mouse.velocity < 0.001) mouse.velocity = 0;
-      asciiEffect.setVelocity(mouse.velocity);
+    // Update active effect
+    activeEffect.setMouse(mouse.x, mouse.y);
+    activeEffect.setTime(now / 1000);
+    mouse.velocity *= 0.92;
+    if (mouse.velocity < 0.001) mouse.velocity = 0;
+    activeEffect.setVelocity(mouse.velocity);
 
-      // Reveal animation
-      if (revealStart !== null) {
-        const elapsed = now - revealStart;
-        const t = Math.min(elapsed / REVEAL_DURATION, 1);
-        const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        asciiEffect.setReveal(eased);
-
-        const cellT = Math.min(elapsed / 2500, 1);
-        const currentCell = CELL_START + (targetCellSize - CELL_START) * (cellT * cellT * cellT);
-        asciiEffect.setCellSize(currentCell);
-
-        if (t >= 1) {
-          asciiEffect.setReveal(1);
-          asciiEffect.setCellSize(targetCellSize);
-          revealStart = null;
-        }
+    // Reveal animation (ASCII mode only)
+    if (revealStart !== null && currentMode === 'ascii') {
+      const elapsed = now - revealStart;
+      const t = Math.min(elapsed / REVEAL_DURATION, 1);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      asciiEffect.setReveal(eased);
+      const cellT = Math.min(elapsed / 2500, 1);
+      asciiEffect.setCellSize(CELL_START + (targetCellSize - CELL_START) * cellT * cellT * cellT);
+      if (t >= 1) {
+        asciiEffect.setReveal(1);
+        asciiEffect.setCellSize(targetCellSize);
+        revealStart = null;
       }
     }
 
-    // Render
-    if (composer) {
-      composer.render();
-    } else {
-      renderer.render(scene, camera);
-    }
+    activeComposer.render();
   }
 
   animate();
-  console.log('[Scene] Animation loop started');
 
   // ---- Public API ----
   return {
+    setMode(mode) {
+      if (mode === currentMode) return;
+      if (!composers[mode]) return;
+      currentMode = mode;
+      activeComposer = composers[mode];
+      activeEffect = mode === 'ascii' ? asciiEffect : matrixEffect;
+      console.log('[Scene] Switched to', mode);
+    },
+    getMode() {
+      return currentMode;
+    },
     setTheme(isDark) {
       const bg = isDark ? '#0a0a0a' : '#f0f0f0';
       const fg = isDark ? '#ffffff' : '#1a1a1a';
-      scene.background = new THREE.Color(bg);
-      if (asciiEffect) {
-        asciiEffect.setColor(fg);
-        asciiEffect.setBackgroundColor(bg);
-      }
+      scene.background = new THREE.Color(isDark ? '#000000' : '#f0f0f0');
+      asciiEffect.setColor(fg);
+      asciiEffect.setBackgroundColor(bg);
+      // Matrix always stays dark
+      matrixEffect.setBackgroundColor('#000000');
     },
   };
 }

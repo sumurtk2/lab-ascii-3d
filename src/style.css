@@ -165,6 +165,56 @@ a:hover {
 }
 
 /* ============================================
+   Mode Switcher
+   ============================================ */
+.mode-switcher {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 0.4s forwards;
+}
+
+.mode-btn {
+  padding: 0.4rem 1.5rem;
+  background: var(--surface);
+  border: 2px solid var(--panel-border);
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.mode-btn:first-child {
+  border-right: 1px solid var(--panel-border);
+}
+
+.mode-btn:last-child {
+  border-left: 1px solid var(--panel-border);
+}
+
+.mode-btn:hover {
+  color: var(--foreground);
+  background: var(--soft);
+}
+
+.mode-btn.active {
+  background: var(--foreground);
+  color: var(--surface);
+  border-color: var(--foreground);
+}
+
+/* Matrix-specific: force dark background on viewer when in matrix mode */
+[data-mode="matrix"] .viewer-container {
+  background: #000;
+}
+
+/* ============================================
    3D Viewer
    ============================================ */
 .viewer-container {
