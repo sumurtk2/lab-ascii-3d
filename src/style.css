@@ -209,9 +209,23 @@ a:hover {
   border-color: var(--foreground);
 }
 
-/* Matrix-specific: force dark background on viewer when in matrix mode */
+/* Matrix-specific: match page and viewer backgrounds so no visible square */
+[data-mode="matrix"] .app-frame,
 [data-mode="matrix"] .viewer-container {
   background: #000;
+}
+
+[data-mode="matrix"] .container {
+  background: #000;
+}
+
+[data-mode="matrix"] .header,
+[data-mode="matrix"] .chat-panel {
+  border-color: #1a2a1a;
+}
+
+[data-mode="matrix"] .chat-panel {
+  background: #050a05;
 }
 
 /* ============================================

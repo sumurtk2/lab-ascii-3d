@@ -1,6 +1,7 @@
 /**
  * Custom ASCII Post-Processing Effect
  * Converts 3D scene into ASCII character art
+ * With random glitches and Matrix rain leak easter eggs
  */
 
 import { Effect } from 'postprocessing';
@@ -23,26 +24,91 @@ float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
 }
 
+float random2(vec2 st) {
+    return fract(sin(dot(st, vec2(45.5432, 98.1234))) * 12345.6789);
+}
+
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-    // Grid dimensions in cells
     vec2 cell = resolution / uCellSize;
     vec2 grid = 1.0 / cell;
+    vec2 cellCoord = floor(uv / grid);
+    vec2 cellUV = fract(uv * cell);
 
-    // Pixelize: sample center of each cell
-    vec2 pixelizedUV = grid * (0.5 + floor(uv / grid));
+    // === GLITCH EFFECT ===
+    float glitchCycle = floor(uTime / 5.0);
+    float glitchPhase = fract(uTime / 5.0);
+    float glitchTrigger = random(vec2(glitchCycle, 0.0));
+    bool isGlitching = glitchTrigger > 0.4 && glitchPhase < 0.03;
+
+    // 1 in 10 glitches is a BIG glitch (longer, more bands, bigger displacement)
+    bool isBigGlitch = isGlitching && random(vec2(glitchCycle, 99.0)) < 0.1;
+    if (isBigGlitch) {
+        isGlitching = glitchPhase < 0.08; // lasts ~3x longer
+    }
+
+    // Micro-glitch
+    float microCycle = floor(uTime / 2.0);
+    float microPhase = fract(uTime / 2.0);
+    float microTrigger = random(vec2(microCycle, 1.0));
+    bool isMicroGlitch = microTrigger > 0.7 && microPhase < 0.015;
+
+    // 1 in 10 micro-glitches is green
+    bool isGreenMicro = isMicroGlitch && random(vec2(microCycle, 88.0)) < 0.1;
+
+    vec2 sampleUV = uv;
+    float glitchActive = 0.0;
+    float greenGlitch = 0.0;
+
+    if (isGlitching) {
+        glitchActive = 1.0;
+
+        if (isBigGlitch) {
+            // BIG glitch: multiple thick bands, heavy displacement
+            for (float b = 0.0; b < 5.0; b++) {
+                float bandY = random(vec2(glitchCycle, 20.0 + b));
+                float bandHeight = 0.04 + random(vec2(glitchCycle, 30.0 + b)) * 0.12;
+                if (abs(uv.y - bandY) < bandHeight) {
+                    float offset = (random(vec2(glitchCycle, 40.0 + b)) - 0.5) * 0.15;
+                    sampleUV.x += offset;
+                }
+            }
+        } else {
+            // Normal glitch: 1-2 thin bands, subtle displacement
+            float bandY = random(vec2(glitchCycle, 2.0));
+            float bandHeight = 0.03 + random(vec2(glitchCycle, 3.0)) * 0.08;
+            if (abs(uv.y - bandY) < bandHeight) {
+                sampleUV.x += (random(vec2(glitchCycle, 4.0)) - 0.5) * 0.06;
+            }
+            float bandY2 = random(vec2(glitchCycle, 5.0));
+            float bandHeight2 = 0.02 + random(vec2(glitchCycle, 6.0)) * 0.04;
+            if (abs(uv.y - bandY2) < bandHeight2) {
+                sampleUV.x -= (random(vec2(glitchCycle, 7.0)) - 0.5) * 0.04;
+            }
+        }
+    }
+
+    if (isMicroGlitch) {
+        float mBandY = random(vec2(microCycle, 10.0));
+        if (abs(uv.y - mBandY) < 0.015) {
+            sampleUV.x += (random(vec2(microCycle, 11.0)) - 0.5) * 0.03;
+            if (isGreenMicro) greenGlitch = 1.0;
+        }
+    }
+
+    // Pixelize with potentially glitched UV
+    vec2 pixelizedUV = grid * (0.5 + floor(sampleUV / grid));
     vec4 pixelized = texture2D(inputBuffer, pixelizedUV);
 
-    // Reveal animation (top to bottom)
+    // Reveal animation
     float yPos = 1.0 - uv.y;
     if (yPos > uReveal) {
         outputColor = vec4(uBackgroundColor, 1.0);
         return;
     }
 
-    // Convert to greyscale
     float brightness = dot(pixelized.rgb, vec3(0.299, 0.587, 0.114));
 
-    // Mouse hover scramble effect
+    // Mouse hover scramble
     vec2 mouseUV = vec2(uMouse.x, 1.0 - uMouse.y);
     float aspect = resolution.x / resolution.y;
     vec2 aUV = vec2(uv.x * aspect, uv.y);
@@ -63,33 +129,83 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     // Apply inversion
     float greyscaled = mix(brightness, 1.0 - brightness, uInvertAmount);
 
-    // Map brightness to character index
+    // Map brightness to character
     float charIndex = floor((uCharactersCount - 1.0) * greyscaled);
-
-    // Character position in the 16x16 atlas grid
     float col = mod(charIndex, 16.0);
     float row = floor(charIndex / 16.0);
-
-    // Position within the current cell (0→1)
-    vec2 cellUV = fract(uv * cell);
-
-    // Look up character in atlas
-    // Atlas is 16x16 grid, texture flipY is disabled so row 0 = top = UV y=0
     vec2 charUV = (vec2(col, row) + cellUV) / 16.0;
     float charBrightness = texture2D(uCharacters, charUV).r;
 
-    // Final color: character pixels get foreground color, rest gets background
+    // Base color
     vec3 finalColor = mix(uBackgroundColor, uColor, charBrightness);
+
+    // === MATRIX RAIN LEAK ===
+    // 1-2 fast green raindrops that streak the full screen height
+    float colId = cellCoord.x;
+    float totalRows = cell.y;
+    float cellY = totalRows - cellCoord.y;
+
+    vec3 matrixGreen = vec3(0.0, 1.0, 0.25);
+    float rainMix = 0.0;
+
+    // Two drop slots, staggered — 1/3 frequency (longer cycles)
+    for (float i = 0.0; i < 2.0; i++) {
+        float cycleLen = 12.0 + i * 9.0; // ~12s and ~21s cycles
+        float cycle = floor(uTime / cycleLen);
+        float phase = fract(uTime / cycleLen);
+
+        // Only active for the first ~40% of cycle (drop falls then disappears)
+        if (phase > 0.4) continue;
+
+        // Random column for this cycle
+        float dropCol = floor(random(vec2(i, cycle)) * cell.x);
+        if (colId != dropCol) continue;
+
+        // Fast drop — travels full height in the active window
+        float dropSpeed = totalRows / (cycleLen * 0.35); // full height in ~35% of cycle
+        float dropHead = phase * cycleLen * dropSpeed;
+        float dropLen = 6.0 + random(vec2(i, cycle + 50.0)) * 6.0;
+        float distFromDrop = dropHead - cellY;
+
+        // Head
+        if (distFromDrop > -1.0 && distFromDrop <= 0.0) {
+            rainMix = max(rainMix, 1.0);
+        }
+        // Trail
+        if (distFromDrop > 0.0 && distFromDrop < dropLen) {
+            float trail = 1.0 - (distFromDrop / dropLen);
+            rainMix = max(rainMix, trail * trail * 0.9);
+        }
+    }
+
+    // Render rain character — normally white, 1 in 10 is green
+    if (rainMix > 0.05) {
+        float rainCharIdx = mod(floor(random(cellCoord + floor(uTime * 6.0)) * uCharactersCount), uCharactersCount);
+        float rc = mod(rainCharIdx, 16.0);
+        float rr = floor(rainCharIdx / 16.0);
+        vec2 rainCharUV = (vec2(rc, rr) + cellUV) / 16.0;
+        float rainCharBright = texture2D(uCharacters, rainCharUV).r;
+
+        // Pick color: use cycle index to decide — ~10% green, 90% white
+        float colorSeed = random(vec2(colId + 99.0, floor(uTime / 8.0)));
+        vec3 dropColor = colorSeed < 0.1 ? matrixGreen : uColor;
+
+        vec3 rainColor = mix(uBackgroundColor, dropColor, rainCharBright);
+        finalColor = mix(finalColor, rainColor, rainMix);
+    }
+
+    // Green micro-glitch tint (1 in 10 micro-glitches)
+    if (greenGlitch > 0.5) {
+        finalColor = mix(finalColor, vec3(0.0, finalColor.g + 0.5, 0.0), 0.6);
+    }
+
     outputColor = vec4(finalColor, 1.0);
 }
 `;
 
-/**
- * Generate a canvas texture atlas with ASCII characters in a 16x16 grid
- */
 function createCharactersTexture(characters, fontSize) {
   const size = 1024;
-  const cellSize = size / 16; // 64px per cell
+  const cellSize = size / 16;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -97,11 +213,8 @@ function createCharactersTexture(characters, fontSize) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');
 
-  // Black background
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, size, size);
-
-  // White characters
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fontSize}px monospace`;
   ctx.textAlign = 'center';
@@ -110,18 +223,14 @@ function createCharactersTexture(characters, fontSize) {
   for (let i = 0; i < characters.length; i++) {
     const col = i % 16;
     const row = Math.floor(i / 16);
-    const x = col * cellSize + cellSize / 2;
-    const y = row * cellSize + cellSize / 2;
-    ctx.fillText(characters[i], x, y);
+    ctx.fillText(characters[i], col * cellSize + cellSize / 2, row * cellSize + cellSize / 2);
   }
 
   const texture = new CanvasTexture(canvas);
-  texture.flipY = false; // CRITICAL: keep canvas coords = UV coords
+  texture.flipY = false;
   texture.minFilter = NearestFilter;
   texture.magFilter = NearestFilter;
   texture.needsUpdate = true;
-
-  console.log('[ASCII] Texture created, chars:', characters.length, 'flipY:', texture.flipY);
   return texture;
 }
 
