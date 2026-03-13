@@ -19,6 +19,7 @@ uniform vec2 uMouse;
 uniform float uHoverRadius;
 uniform float uTime;
 uniform float uVelocity;
+uniform float uHeld;
 
 float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
@@ -35,41 +36,60 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec2 cellUV = fract(uv * cell);
 
     // === GLITCH EFFECT ===
-    float glitchCycle = floor(uTime / 5.0);
-    float glitchPhase = fract(uTime / 5.0);
+    float glitchInterval = 4.17 / (1.0 + uHeld * 5.0); // 6x when held
+    float glitchCycle = floor(uTime / glitchInterval);
+    float glitchPhase = fract(uTime / glitchInterval);
     float glitchTrigger = random(vec2(glitchCycle, 0.0));
     bool isGlitching = glitchTrigger > 0.4 && glitchPhase < 0.03;
 
-    // 1 in 10 glitches is a BIG glitch (longer, more bands, bigger displacement)
-    bool isBigGlitch = isGlitching && random(vec2(glitchCycle, 99.0)) < 0.1;
+    // 1 in 10 glitches is BIG normally; 50/50 when held
+    float bigChance = uHeld > 0.5 ? 0.5 : 0.1;
+    bool isBigGlitch = isGlitching && random(vec2(glitchCycle, 99.0)) < bigChance;
     if (isBigGlitch) {
-        isGlitching = glitchPhase < 0.08; // lasts ~3x longer
+        isGlitching = glitchPhase < (uHeld > 0.5 ? 0.10 : 0.08);
+    }
+    // When held, lower the trigger threshold so more glitches fire
+    if (uHeld > 0.5) {
+        isGlitching = isGlitching || (glitchTrigger > 0.15 && glitchPhase < 0.06);
     }
 
     // Micro-glitch
-    float microCycle = floor(uTime / 2.0);
-    float microPhase = fract(uTime / 2.0);
+    float microInterval = 1.67 / (1.0 + uHeld * 5.0); // 6x when held
+    float microCycle = floor(uTime / microInterval);
+    float microPhase = fract(uTime / microInterval);
     float microTrigger = random(vec2(microCycle, 1.0));
     bool isMicroGlitch = microTrigger > 0.7 && microPhase < 0.015;
 
-    // 1 in 10 micro-glitches is green
-    bool isGreenMicro = isMicroGlitch && random(vec2(microCycle, 88.0)) < 0.1;
+    // 1 in 10 micro-glitches is green normally; 1 in 3 when held
+    float greenMicroChance = uHeld > 0.5 ? 0.33 : 0.1;
+    bool isGreenMicro = isMicroGlitch && random(vec2(microCycle, 88.0)) < greenMicroChance;
 
     vec2 sampleUV = uv;
     float glitchActive = 0.0;
-    float greenGlitch = 0.0;
+    float greenBand = 0.0;
 
     if (isGlitching) {
         glitchActive = 1.0;
 
         if (isBigGlitch) {
             // BIG glitch: multiple thick bands, heavy displacement
+            float heldMul = 1.0 + uHeld * 1.5; // 2.5x bigger when held
             for (float b = 0.0; b < 5.0; b++) {
                 float bandY = random(vec2(glitchCycle, 20.0 + b));
-                float bandHeight = 0.04 + random(vec2(glitchCycle, 30.0 + b)) * 0.12;
+                float bandHeight = (0.04 + random(vec2(glitchCycle, 30.0 + b)) * 0.12) * heldMul;
                 if (abs(uv.y - bandY) < bandHeight) {
-                    float offset = (random(vec2(glitchCycle, 40.0 + b)) - 0.5) * 0.15;
+                    float offset = (random(vec2(glitchCycle, 40.0 + b)) - 0.5) * 0.15 * heldMul;
                     sampleUV.x += offset;
+                }
+            }
+            // Green tint on 1-2 displaced bands only (not all 5)
+            if (uHeld > 0.5 && random(vec2(glitchCycle, 77.0)) < 0.4) {
+                for (float b = 0.0; b < 2.0; b++) {
+                    float bY = random(vec2(glitchCycle, 20.0 + b));
+                    float bH = 0.03 + random(vec2(glitchCycle, 30.0 + b)) * 0.04; // thin green bands
+                    if (abs(uv.y - bY) < bH) {
+                        greenBand = 1.0;
+                    }
                 }
             }
         } else {
@@ -89,9 +109,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
     if (isMicroGlitch) {
         float mBandY = random(vec2(microCycle, 10.0));
-        if (abs(uv.y - mBandY) < 0.015) {
+        float mBandH = 0.015;
+        bool inMicroBand = abs(uv.y - mBandY) < mBandH;
+        if (inMicroBand) {
             sampleUV.x += (random(vec2(microCycle, 11.0)) - 0.5) * 0.03;
-            if (isGreenMicro) greenGlitch = 1.0;
+            if (isGreenMicro) greenBand = 1.0;
         }
     }
 
@@ -148,9 +170,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     vec3 matrixGreen = vec3(0.0, 1.0, 0.25);
     float rainMix = 0.0;
 
-    // Two drop slots, staggered — 1/3 frequency (longer cycles)
-    for (float i = 0.0; i < 2.0; i++) {
-        float cycleLen = 12.0 + i * 9.0; // ~12s and ~21s cycles
+    // Drop slots: 2 normally, 6 when held (3x more drops, same speed)
+    float maxDrops = uHeld > 0.5 ? 6.0 : 2.0;
+    for (float i = 0.0; i < 6.0; i++) {
+        if (i >= maxDrops) break;
+        float cycleLen = 4.3 + mod(i, 2.0) * 3.2 + i * 1.7; // staggered cycles
         float cycle = floor(uTime / cycleLen);
         float phase = fract(uTime / cycleLen);
 
@@ -162,7 +186,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
         if (colId != dropCol) continue;
 
         // Fast drop — travels full height in the active window
-        float dropSpeed = totalRows / (cycleLen * 0.35); // full height in ~35% of cycle
+        float dropSpeed = totalRows / (cycleLen * 0.35);
         float dropHead = phase * cycleLen * dropSpeed;
         float dropLen = 6.0 + random(vec2(i, cycle + 50.0)) * 6.0;
         float distFromDrop = dropHead - cellY;
@@ -194,9 +218,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
         finalColor = mix(finalColor, rainColor, rainMix);
     }
 
-    // Green micro-glitch tint (1 in 10 micro-glitches)
-    if (greenGlitch > 0.5) {
-        finalColor = mix(finalColor, vec3(0.0, finalColor.g + 0.5, 0.0), 0.6);
+    // Green glitch tint — only within displaced bands
+    if (greenBand > 0.5) {
+        finalColor.r *= 0.2;
+        finalColor.g = min(finalColor.g + 0.4, 1.0);
+        finalColor.b *= 0.2;
     }
 
     outputColor = vec4(finalColor, 1.0);
@@ -262,6 +288,7 @@ class ASCIIEffect extends Effect {
       ['uHoverRadius', new Uniform(0.15)],
       ['uTime', new Uniform(0)],
       ['uVelocity', new Uniform(0)],
+      ['uHeld', new Uniform(0)],
     ]);
 
     super('ASCIIEffect', FRAGMENT_SHADER, { uniforms });
@@ -283,6 +310,7 @@ class ASCIIEffect extends Effect {
   setMouse(x, y) { this.uniforms.get('uMouse').value.set(x, y); }
   setTime(v) { this.uniforms.get('uTime').value = v; }
   setVelocity(v) { this.uniforms.get('uVelocity').value = v; }
+  setHeld(v) { this.uniforms.get('uHeld').value = v; }
 }
 
 export { ASCIIEffect, getCellSize };

@@ -1,4 +1,11 @@
 /* ============================================
+   Global Utility
+   ============================================ */
+.hidden {
+  display: none !important;
+}
+
+/* ============================================
    CSS Variables — Theme System
    ============================================ */
 :root,
@@ -144,9 +151,9 @@ a:hover {
 }
 
 .brand {
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-size: clamp(1.8rem, 5vw, 3rem);
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   line-height: 1;
   color: var(--foreground);
   text-rendering: geometricPrecision;
@@ -271,6 +278,129 @@ a:hover {
   background: var(--foreground);
   color: var(--surface);
   border-color: var(--foreground);
+}
+
+/* ============================================
+   Controls Row
+   ============================================ */
+.controls-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.3rem;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 0.6s forwards;
+}
+
+.ctrl-btn {
+  padding: 0.3rem 1.2rem;
+  background: transparent;
+  border: 2px solid var(--muted);
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.ctrl-btn:hover {
+  border-color: var(--foreground);
+  color: var(--foreground);
+}
+
+.ctrl-btn.talking {
+  border-color: #00ff41;
+  color: #00ff41;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+  animation: talkPulse 1.5s ease infinite;
+}
+
+.ctrl-btn.enhanced {
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+@keyframes talkPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 255, 65, 0.6); }
+}
+
+.ctrl-btn.hidden {
+  display: none;
+}
+
+/* ============================================
+   Sliders Panel
+   ============================================ */
+.sliders-panel {
+  max-width: 340px;
+  margin: 0.4rem auto;
+  padding: 0.5rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.sliders-panel.hidden {
+  display: none;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.slider-row label {
+  width: 75px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--panel-border);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--foreground);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.slider-row input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--foreground);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.sl-val {
+  width: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--muted);
+  text-align: left;
+  flex-shrink: 0;
 }
 
 /* ============================================

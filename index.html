@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LAB — Sumur Digital</title>
+  <title>SUMUR_AI:(NOVA)</title>
   <meta name="description" content="3D ASCII Art Lab by Sumur Digital">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,14 +25,55 @@
     <div class="container">
       <!-- Header -->
       <header class="header">
-        <h1 class="brand">SUMUR<span class="brand-accent">LAB</span></h1>
-        <p class="subtitle">— experimental 3D playground —</p>
+        <h1 class="brand">SUMUR_AI:<span class="brand-accent">(NOVA)</span></h1>
       </header>
 
-      <!-- Model Selector -->
-      <div class="model-switcher">
-        <button class="model-btn active" data-model="helmet">HELMET</button>
-        <button class="model-btn" data-model="misa">MISA AMANE</button>
+      <!-- Model Selector (hidden, accessible via dev) -->
+      <div class="model-switcher" id="model-switcher" style="display:none">
+        <button class="model-btn" data-model="helmet">HELMET</button>
+        <button class="model-btn" data-model="misa">MISA</button>
+        <button class="model-btn active" data-model="avatar">AVATAR</button>
+      </div>
+
+      <!-- Controls row (hidden, accessible via dev) -->
+      <div class="controls-row" id="controls-row" style="display:none">
+        <button id="talk-btn" class="ctrl-btn">▶ TALK</button>
+        <button id="lighting-btn" class="ctrl-btn">☀ FLAT</button>
+        <button id="sliders-toggle" class="ctrl-btn">⚙ TWEAK</button>
+      </div>
+
+      <!-- Sliders panel -->
+      <div id="sliders-panel" class="sliders-panel" style="display:none">
+        <div class="slider-row">
+          <label>AMBIENT</label>
+          <input type="range" id="sl-ambient" min="0" max="5" step="0.1" value="2">
+          <span class="sl-val" id="sv-ambient">2.0</span>
+        </div>
+        <div class="slider-row">
+          <label>KEY LIGHT</label>
+          <input type="range" id="sl-key" min="0" max="10" step="0.1" value="4">
+          <span class="sl-val" id="sv-key">4.0</span>
+        </div>
+        <div class="slider-row">
+          <label>RIM LIGHT</label>
+          <input type="range" id="sl-rim" min="0" max="10" step="0.1" value="2">
+          <span class="sl-val" id="sv-rim">2.0</span>
+        </div>
+        <div class="slider-row">
+          <label>ROUGHNESS</label>
+          <input type="range" id="sl-rough" min="0" max="1" step="0.01" value="0.5">
+          <span class="sl-val" id="sv-rough">0.50</span>
+        </div>
+        <div class="slider-row">
+          <label>METALNESS</label>
+          <input type="range" id="sl-metal" min="0" max="1" step="0.01" value="0">
+          <span class="sl-val" id="sv-metal">0.00</span>
+        </div>
+        <div class="slider-row">
+          <label>ENV MAP</label>
+          <input type="range" id="sl-env" min="0" max="3" step="0.05" value="0">
+          <span class="sl-val" id="sv-env">0.00</span>
+        </div>
       </div>
 
       <!-- 3D Viewer -->
