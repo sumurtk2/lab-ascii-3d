@@ -9,8 +9,8 @@ import { EffectComposer, EffectPass, RenderPass } from 'postprocessing';
 import { ASCIIEffect, getCellSize } from './ascii-effect.js';
 
 const MODELS = {
-  helmet: { path: '/models/model.glb', rotY: Math.PI * 0.1 },
-  misa: { path: '/models/misa.glb', rotY: 0 },
+  helmet: { path: '/models/model.glb', rotY: Math.PI * 0.1, frameMode: 'full' },
+  misa: { path: '/models/misa.glb', rotY: 0, frameMode: 'head' },
 };
 
 export function initScene(canvas) {
@@ -147,15 +147,37 @@ export function initScene(canvas) {
   }
 
   function addModel(model, config) {
-    // Center and scale
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    const scale = 2.0 / Math.max(size.x, size.y, size.z);
-    model.scale.setScalar(scale);
-    model.position.copy(center.multiplyScalar(-scale));
-    model.rotation.set(0, config.rotY || 0, 0);
 
+    if (config.frameMode === 'head') {
+      // Frame the top ~30% of the model (head + shoulders)
+      const scale = 2.0 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+
+      // Center horizontally, but shift down so head fills the frame
+      const scaledCenter = center.clone().multiplyScalar(scale);
+      const scaledHeight = size.y * scale;
+      // Push the model down so the head area is centered in view
+      // Head is roughly at the top 25% of the model
+      const headOffset = scaledHeight * 0.32;
+      model.position.set(-scaledCenter.x, -scaledCenter.y - headOffset, -scaledCenter.z);
+
+      // Zoom camera in closer for bust shot
+      camera.position.set(0, 0, 1.8);
+      controls.minDistance = 1.0;
+    } else {
+      // Full model framing (default)
+      const scale = 2.0 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+      model.position.copy(center.multiplyScalar(-scale));
+
+      camera.position.set(0, 0, 3.2);
+      controls.minDistance = 1.5;
+    }
+
+    model.rotation.set(0, config.rotY || 0, 0);
     scene.add(model);
     currentModel = model;
     modelLoaded = true;
