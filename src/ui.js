@@ -105,6 +105,18 @@ export function initUI(sceneAPI) {
     setTheme(current === 'dark' ? 'light' : 'dark');
   });
 
+  // ---- Model switcher ----
+  const modelBtns = document.querySelectorAll('.model-btn');
+  modelBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const model = btn.getAttribute('data-model');
+      if (!model || !sceneAPI) return;
+      modelBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      sceneAPI.loadModel(model);
+    });
+  });
+
   // ---- Chat ----
   const messagesContainer = document.getElementById('chat-messages');
   const chatInput = document.getElementById('chat-input');

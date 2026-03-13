@@ -1,5 +1,5 @@
 /**
- * Three.js Scene — ASCII post-processing with glitch effects
+ * Three.js Scene — ASCII post-processing with model selector
  */
 
 import * as THREE from 'three';
@@ -8,9 +8,12 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { EffectComposer, EffectPass, RenderPass } from 'postprocessing';
 import { ASCIIEffect, getCellSize } from './ascii-effect.js';
 
-export function initScene(canvas) {
-  console.log('[Scene] Initializing...');
+const MODELS = {
+  helmet: { path: '/models/model.glb', rotY: Math.PI * 0.1 },
+  misa: { path: '/models/misa.glb', rotY: 0 },
+};
 
+export function initScene(canvas) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: false,
@@ -103,32 +106,71 @@ export function initScene(canvas) {
   window.addEventListener('resize', resize);
   requestAnimationFrame(resize);
 
-  // ---- Load Model ----
+  // ---- Model Management ----
+  let currentModel = null;
   let modelLoaded = false;
   let revealStart = null;
   const REVEAL_DURATION = 2000;
   const CELL_START = getCellSize(50);
-
   const loader = new GLTFLoader();
-  loader.load('/models/model.glb', (gltf) => {
-    console.log('[Scene] Model loaded');
-    const model = gltf.scene;
+  const loadedModels = {};
+
+  function loadModel(key) {
+    const config = MODELS[key];
+    if (!config) return;
+
+    // Show loading
+    const loadingEl = document.getElementById('loading-indicator');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    modelLoaded = false;
+
+    // Remove current model
+    if (currentModel) {
+      scene.remove(currentModel);
+      currentModel = null;
+    }
+
+    // Check cache
+    if (loadedModels[key]) {
+      addModel(loadedModels[key], config);
+      return;
+    }
+
+    loader.load(config.path, (gltf) => {
+      const model = gltf.scene;
+      loadedModels[key] = model;
+      addModel(model, config);
+    }, undefined, (err) => {
+      console.error('[Scene] Load error:', err);
+      if (loadingEl) loadingEl.querySelector('.loading-text').textContent = 'LOAD ERROR';
+    });
+  }
+
+  function addModel(model, config) {
+    // Center and scale
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const scale = 2.0 / Math.max(size.x, size.y, size.z);
     model.scale.setScalar(scale);
-    model.position.sub(center.multiplyScalar(scale));
-    model.rotation.y = Math.PI * 0.1;
+    model.position.copy(center.multiplyScalar(-scale));
+    model.rotation.set(0, config.rotY || 0, 0);
+
     scene.add(model);
+    currentModel = model;
     modelLoaded = true;
 
     const loadingEl = document.getElementById('loading-indicator');
     if (loadingEl) loadingEl.classList.add('hidden');
+
+    // Reset reveal
     revealStart = performance.now();
-  }, undefined, (err) => {
-    console.error('[Scene] Load error:', err);
-  });
+    asciiEffect.setCellSize(CELL_START);
+    asciiEffect.setReveal(0);
+  }
+
+  // Load default model
+  loadModel('helmet');
 
   // ---- Animation ----
   function animate() {
@@ -163,6 +205,7 @@ export function initScene(canvas) {
   animate();
 
   return {
+    loadModel,
     setTheme(isDark) {
       const bg = isDark ? '#0a0a0a' : '#f0f0f0';
       const fg = isDark ? '#ffffff' : '#1a1a1a';
