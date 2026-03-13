@@ -4,22 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SUMUR_AI:(NOVA)</title>
-  <meta name="description" content="3D ASCII Art Lab by Sumur Digital">
+  <meta name="description" content="Nova AI — Interactive 3D Avatar Lab by Sumur Digital">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/src/style.css">
+  <script type="module" crossorigin src="/assets/index-D2AUnkZX.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-c4euG15k.css">
 </head>
 <body>
-  <!-- Theme toggle -->
-  <button id="theme-toggle" aria-label="Toggle theme">
-    <svg id="icon-moon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5Z"/>
-    </svg>
-    <svg id="icon-sun" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-    </svg>
-  </button>
+
 
   <div class="app-frame scanline-overlay">
     <div class="container">
@@ -84,23 +77,13 @@
         </div>
       </div>
 
-      <!-- Chat Panel -->
-      <div class="chat-panel">
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="suggestions">
-          <button class="suggestion-btn" data-question="What is this?">
-            <span class="arrow">↳</span> What is this?
-          </button>
-          <button class="suggestion-btn" data-question="What tech powers this?">
-            <span class="arrow">↳</span> What tech powers this?
-          </button>
-          <button class="suggestion-btn" data-question="Who built this?">
-            <span class="arrow">↳</span> Who built this?
-          </button>
-        </div>
-        <div class="chat-input-row">
-          <span class="input-prefix">⣿</span>
-          <input type="text" id="chat-input" class="chat-input" placeholder="Ask something..." />
+      <!-- Q&A Panel -->
+      <div class="qa-panel">
+        <div id="qa-answer" class="qa-answer"></div>
+        <div class="qa-buttons">
+          <button class="qa-btn" data-q="identity">¿Quién soy?</button>
+          <button class="qa-btn" data-q="origin">¿Quién me ha construido?</button>
+          <button class="qa-btn" data-q="tech">¿Qué tecnología uso?</button>
         </div>
       </div>
 
@@ -108,13 +91,11 @@
       <footer class="footer">
         <div class="footer-line"></div>
         <div class="footer-content">
-          <span class="footer-text">Built by <a href="https://sumurdigital.com" target="_blank" rel="noopener">Sumur Digital</a></span>
-          <span class="footer-text">Three.js + Custom ASCII Shader</span>
+          <span class="footer-text">Made with passion by <a href="https://sumurdigital.com" target="_blank" rel="noopener">SUMUR DIGITAL</a></span>
         </div>
       </footer>
     </div>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
